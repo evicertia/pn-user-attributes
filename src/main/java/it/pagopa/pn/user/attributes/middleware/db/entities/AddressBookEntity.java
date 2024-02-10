@@ -14,7 +14,7 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbIgnor
  * sk: {ADDRESSTYPE}#{senderId}#{CHANNELTYPE}
  * ADDRESSTYPE = LEGAL, COURTESY
  * senderId = default, senderid != default
- * CHANNELTYPE = PEC, APPIO, EMAIL, SMS
+ * CHANNELTYPE = PEC, APPIO, EMAIL, SMS, EVINOTICE
  */
 @DynamoDbBean
 @Data

@@ -5,7 +5,7 @@
     <groupId>it.pagopa.pn</groupId>
     <artifactId>pn-parent</artifactId>
     <version>2.1.1</version>
-    <relativePath />
+    <relativePath>../pn-parent-2.1.1/pom.xml</relativePath>
   </parent>
   <groupId>it.pagopa.pn.user.attributes</groupId>
   <artifactId>pn-user-attributes</artifactId>
@@ -118,6 +118,12 @@
       <groupId>io.awspring.cloud</groupId>
       <artifactId>spring-cloud-starter-aws-messaging</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <version>3.0.1</version>
+        <scope>provided</scope>
     </dependency>
   </dependencies>
 
@@ -394,6 +400,32 @@
               <modelNameSuffix />
             </configuration>
           </execution>
+          <execution>
+            <id>generate-client-evinotice</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <inputSpec>${project.basedir}/docs/openapi/api-intenet-address-v2.yaml</inputSpec>
+              <generatorName>java</generatorName>
+              <library>webclient</library>
+              <generateApiDocumentation>false</generateApiDocumentation>
+              <templateDirectory>${project.build.directory}/dependency-resources/scripts/openapi/templates/5.4.0/client</templateDirectory>
+              <generateApiTests>false</generateApiTests>
+              <generateModelTests>false</generateModelTests>
+              <generateSupportingFiles>true</generateSupportingFiles>
+              <configOptions>
+                <swaggerAnnotations>false</swaggerAnnotations>
+                <openApiNullable>false</openApiNullable>
+                <useTags>true</useTags>
+              </configOptions>
+              <modelPackage>${project.groupId}.user.attributes.generated.openapi.msclient.evinotice.v2.dto</modelPackage>
+              <apiPackage>${project.groupId}.user.attributes.generated.openapi.msclient.evinotice.v2.api</apiPackage>
+              <modelNameSuffix>Dto</modelNameSuffix>
+            </configuration>
+          </execution>
+
         </executions>
       </plugin>
     </plugins>

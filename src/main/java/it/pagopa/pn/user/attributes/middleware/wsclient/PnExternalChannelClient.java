@@ -8,6 +8,8 @@ import it.pagopa.pn.commons.log.PnLogger;
 import it.pagopa.pn.commons.utils.LogUtils;
 import it.pagopa.pn.user.attributes.config.PnUserattributesConfig;
 import it.pagopa.pn.user.attributes.exceptions.PnInvalidInputException;
+import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.evinotice.v2.api.EvinoticeApi;
+import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.evinotice.v2.dto.EviNoticeDto;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.externalchannels.v1.api.DigitalCourtesyMessagesApi;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.externalchannels.v1.api.DigitalLegalMessagesApi;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.externalchannels.v1.dto.DigitalCourtesyMailRequestDto;
@@ -24,6 +26,7 @@ import reactor.core.publisher.Mono;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,19 +47,18 @@ public class PnExternalChannelClient {
     private final DigitalLegalMessagesApi digitalLegalMessagesApi;
     private final PnDataVaultClient dataVaultClient;
     private final TemplateGenerator templateGenerator;
+    private final MsClientConfig msClientConfig;
 
     public PnExternalChannelClient(PnUserattributesConfig pnUserattributesConfig,
                                    DigitalCourtesyMessagesApi digitalCourtesyMessagesApi, DigitalLegalMessagesApi digitalLegalMessagesApi, PnDataVaultClient dataVaultClient,
-                                   TemplateGenerator templateGenerator) {
+                                   TemplateGenerator templateGenerator, MsClientConfig msClientConfig) {
         this.pnUserattributesConfig = pnUserattributesConfig;
         this.digitalCourtesyMessagesApi = digitalCourtesyMessagesApi;
         this.digitalLegalMessagesApi = digitalLegalMessagesApi;
         this.dataVaultClient = dataVaultClient;
         this.templateGenerator = templateGenerator;
+        this.msClientConfig = msClientConfig;
     }
-
-
-
 
     public Mono<String> sendCourtesyPecRejected(String requestId, String recipientId, String address)
     {
@@ -116,11 +118,15 @@ public class PnExternalChannelClient {
     public Mono<String> sendVerificationCode(String recipientId, String address, LegalChannelTypeDto legalChannelType, CourtesyChannelTypeDto courtesyChannelType, String verificationCode)
     {
         String requestId = UUID.randomUUID().toString();
-        if ( ! pnUserattributesConfig.isDevelopment() ) {
-            if (legalChannelType != null)
-                return sendLegalVerificationCode(recipientId, requestId, address, legalChannelType, verificationCode);
-            else
+        if (! pnUserattributesConfig.isDevelopment() ) {
+            if (legalChannelType != null) {
+                if (legalChannelType != LegalChannelTypeDto.EVINOTICE)
+                    return sendLegalVerificationCode(recipientId, requestId, address, legalChannelType, verificationCode);
+                else
+                    return submitInternetAddress(recipientId, requestId, address, legalChannelType);
+            }else{
                 return sendCourtesyVerificationCode(recipientId, requestId, address, courtesyChannelType, verificationCode);
+            }
         }
         else {
             log.warn("DEVELOPMENT IS ACTIVE, MOCKING MESSAGE SEND!!!!");
@@ -159,7 +165,6 @@ public class PnExternalChannelClient {
                         }
                 ));
     }
-
 
     private Mono<String> sendLegalMessage(String recipientId, String requestId, String address, LegalChannelTypeDto legalChannelType, String body, String subject)
     {
@@ -268,6 +273,67 @@ public class PnExternalChannelClient {
         else
             throw new PnInvalidInputException(ERROR_CODE_INVALID_COURTESY_CHANNEL, "courtesyChannelType");
     }
+
+    public Mono<String> submitInternetAddress(String requestId, String recipientId, String address, LegalChannelTypeDto legalChannelType)
+    {
+        // TODO: Create PnLogger EVINOTICE EXTERNAL KEYS
+        log.logInvokingAsyncExternalService(PnLogger.EXTERNAL_SERVICES.PN_EXTERNAL_CHANNELS, "Submitting an EviNotice", requestId);
+
+        if ( ! pnUserattributesConfig.isDevelopment() ) {
+            String logMessage = String.format(
+                    "submiting new evinotice recipientId=%s address=%s requestId=%s",
+                    recipientId, LogUtils.maskEmailAddress(address), requestId
+            );
+            PnAuditLogBuilder auditLogBuilder = new PnAuditLogBuilder();
+            PnAuditLogEvent logEvent = auditLogBuilder
+                    .before(PnAuditLogEventType.AUD_AB_VALIDATE_PEC, logMessage)
+                    .build();
+            logEvent.log();
+            return sendEviNotice(recipientId, requestId, address, legalChannelType)
+                    .onErrorResume(x -> {
+                        String message = elabExceptionMessage(x);
+
+                        String failureMessage = String.format("submitEviNotice response error %s", message);
+                        logEvent.generateFailure(failureMessage).log();
+                        log.error("submitEviNotice response error {}", message, x);
+                        return Mono.error(x);
+                    })
+                    .then(Mono.fromSupplier(
+                            () -> {
+                                logEvent.generateWarning(logMessage).log(); // non genero il success, visto che la pec non era valida
+                                return requestId;
+                            }
+                    ));
+        }
+        else {
+            log.warn("DEVELOPMENT IS ACTIVE, MOCKING MESSAGE SEND REJECTED!!!!");
+            log.warn("recipientId={} address={}",
+                    recipientId, address);
+            return Mono.just(requestId);
+        }
+    }
+
+    private Mono<Void> sendEviNotice(String recipientId, String requestId, String address, LegalChannelTypeDto legalChannelType)
+    {
+        if (legalChannelType != LegalChannelTypeDto.EVINOTICE)
+            throw new PnInvalidInputException(ERROR_CODE_INVALID_LEGAL_CHANNEL, "legalChannelType");
+
+            EvinoticeApi eviNoticeApi =  msClientConfig.eviNoticeApi(pnUserattributesConfig);
+            EviNoticeDto eviNoticeDTO = new EviNoticeDto();
+
+            eviNoticeDTO.setSubject("Asunto del eviNotice");
+            eviNoticeDTO.setBody("Cuerpo del eviNotice");
+            eviNoticeDTO.setRecipientAddress(address);
+            eviNoticeDTO.setAffidavitKinds(Arrays.asList("SubmittedAdvanced", "Read", "Refused", "OnDemand", "CompleteAdvanced"));
+            eviNoticeDTO.setCertificationLevel("Advanced");
+            eviNoticeDTO.setDeliverySignFixedEmail(address);
+            eviNoticeDTO.setDeliverySignMethod("EmailPin");
+            eviNoticeDTO.setCommitmentChoice("Disabled");
+            eviNoticeDTO.setCommitmentCommentsAllowed("false");
+
+            return eviNoticeApi.eviNoticeSubmitPost(eviNoticeDTO);
+    }
+
 
     @NotNull
     private Mono<Void> sendCourtesyEmail(String recipientId, String requestId, DigitalCourtesyMailRequestDto.QosEnum batch, String messageBody, String messageSubject, String address) {

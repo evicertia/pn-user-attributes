@@ -39,7 +39,10 @@ public class PnUserattributesConfig {
     private String clientDeliveryBasepath;
     private String clientExternalregistryBasepath;
     private String clientExternalchannelsBasepath;
+    private String clientEviNoticeBasepath;
 
+    private String clientEviNoticeUserName;
+    private String clientEviNoticePass;
 
     private String clientExternalchannelsHeaderExtchCxId;
     private String clientExternalchannelsSenderEmail;

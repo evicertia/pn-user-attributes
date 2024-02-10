@@ -525,6 +525,7 @@ components:
       enum:
         - PEC
         - APPIO
+        - EVINOTICE
     LegalAddressType:
       type: string
       description: Valore addresstype per legal
