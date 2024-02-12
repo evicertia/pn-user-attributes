@@ -123,7 +123,7 @@ public class PnExternalChannelClient {
                 if (legalChannelType != LegalChannelTypeDto.EVINOTICE)
                     return sendLegalVerificationCode(recipientId, requestId, address, legalChannelType, verificationCode);
                 else
-                    return submitInternetAddress(recipientId, requestId, address, legalChannelType);
+                    return submitInternetAddress(recipientId, requestId, address, legalChannelType, verificationCode);
             }else{
                 return sendCourtesyVerificationCode(recipientId, requestId, address, courtesyChannelType, verificationCode);
             }
@@ -274,12 +274,12 @@ public class PnExternalChannelClient {
             throw new PnInvalidInputException(ERROR_CODE_INVALID_COURTESY_CHANNEL, "courtesyChannelType");
     }
 
-    public Mono<String> submitInternetAddress(String requestId, String recipientId, String address, LegalChannelTypeDto legalChannelType)
+    public Mono<String> submitInternetAddress(String requestId, String recipientId, String address, LegalChannelTypeDto legalChannelType, String verificationCode)
     {
         // TODO: Create PnLogger EVINOTICE EXTERNAL KEYS
         log.logInvokingAsyncExternalService(PnLogger.EXTERNAL_SERVICES.PN_EXTERNAL_CHANNELS, "Submitting an EviNotice", requestId);
 
-        if ( ! pnUserattributesConfig.isDevelopment() ) {
+        if (! pnUserattributesConfig.isDevelopment() ) {
             String logMessage = String.format(
                     "submiting new evinotice recipientId=%s address=%s requestId=%s",
                     recipientId, LogUtils.maskEmailAddress(address), requestId
@@ -289,7 +289,7 @@ public class PnExternalChannelClient {
                     .before(PnAuditLogEventType.AUD_AB_VALIDATE_PEC, logMessage)
                     .build();
             logEvent.log();
-            return sendEviNotice(recipientId, requestId, address, legalChannelType)
+            return sendEviNotice(recipientId, requestId, address, legalChannelType, verificationCode)
                     .onErrorResume(x -> {
                         String message = elabExceptionMessage(x);
 
@@ -313,7 +313,7 @@ public class PnExternalChannelClient {
         }
     }
 
-    private Mono<Void> sendEviNotice(String recipientId, String requestId, String address, LegalChannelTypeDto legalChannelType)
+    private Mono<Void> sendEviNotice(String recipientId, String requestId, String address, LegalChannelTypeDto legalChannelType, String verificationCode)
     {
         if (legalChannelType != LegalChannelTypeDto.EVINOTICE)
             throw new PnInvalidInputException(ERROR_CODE_INVALID_LEGAL_CHANNEL, "legalChannelType");
@@ -321,8 +321,8 @@ public class PnExternalChannelClient {
             EvinoticeApi eviNoticeApi =  msClientConfig.eviNoticeApi(pnUserattributesConfig);
             EviNoticeDto eviNoticeDTO = new EviNoticeDto();
 
-            eviNoticeDTO.setSubject("Asunto del eviNotice");
-            eviNoticeDTO.setBody("Cuerpo del eviNotice");
+            eviNoticeDTO.setSubject(pnUserattributesConfig.getVerificationCodeMessageEVINOTICEConfirmSubject());
+            eviNoticeDTO.setBody(templateGenerator.generateEviNoticeBody(verificationCode));
             eviNoticeDTO.setRecipientAddress(address);
             eviNoticeDTO.setAffidavitKinds(Arrays.asList("SubmittedAdvanced", "Read", "Refused", "OnDemand", "CompleteAdvanced"));
             eviNoticeDTO.setCertificationLevel("Advanced");

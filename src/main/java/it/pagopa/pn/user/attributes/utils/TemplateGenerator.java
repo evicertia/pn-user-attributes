@@ -82,6 +82,20 @@ public class TemplateGenerator {
 
     }
 
+    public String generateEviNoticeBody(String verificationCode) {
+
+        Map<String, Object> templateModel = new HashMap<>();
+        templateModel.put(FIELD_LOGO, SEND_LOGO_BASE64);
+        templateModel.put(FIELD_VERIFICATION_CODE, verificationCode);
+
+        return documentComposition.executeTextTemplate(
+                DocumentComposition.TemplateType.EVINOTICE_CONFIRM_TEMPLATE,
+                templateModel
+            );
+
+    }
+
+
      private static String readLocalImagesInBase64(String classPath) {
         try (InputStream ioStream = new ClassPathResource(classPath).getInputStream()) {
             byte[] bytes = IOUtils.toByteArray(ioStream);

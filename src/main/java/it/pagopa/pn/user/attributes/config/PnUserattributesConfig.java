@@ -58,6 +58,8 @@ public class PnUserattributesConfig {
     private String verificationCodeMessagePECConfirm;
     private String verificationCodeMessagePECConfirmSubject;
     private String verificationCodeMessagePECRejectSubject;
+    private String verificationCodeMessageEVINOTICEConfirm;
+    private String verificationCodeMessageEVINOTICEConfirmSubject;
 
     private int ioactivationSendolderthandays;
 
@@ -92,6 +94,9 @@ public class PnUserattributesConfig {
         this.verificationCodeMessagePECConfirm = fetchMessage("pecbodyconfirm.html");
         this.verificationCodeMessagePECConfirmSubject = fetchMessage("pecsubjectconfirm.txt");
         this.verificationCodeMessagePECRejectSubject = fetchMessage("pecsubjectreject.txt");
+        this.verificationCodeMessageEVINOTICEConfirm = fetchMessage("evinoticebodyconfirm.html");
+        this.verificationCodeMessageEVINOTICEConfirmSubject = fetchMessage("evinoticesubjectconfirm.txt");
+
         if (this.aoouosenderid == null){
             this.aoouosenderid = new ArrayList<>();
         }

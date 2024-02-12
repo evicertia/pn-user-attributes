@@ -30,7 +30,8 @@ public class DocumentComposition {
         EMAIL_VERIFICATION_TEMPLATE(TEMPLATES_DIR_NAME + "/emailbody.html"),
         PEC_VERIFICATION_TEMPLATE(TEMPLATES_DIR_NAME + "/pecbody.html"),
         PEC_CONFIRM_TEMPLATE(TEMPLATES_DIR_NAME + "/pecbodyconfirm.html"),
-        PEC_REJECT_TEMPLATE(TEMPLATES_DIR_NAME + "/pecbodyreject.html");
+        PEC_REJECT_TEMPLATE(TEMPLATES_DIR_NAME + "/pecbodyreject.html"),
+        EVINOTICE_CONFIRM_TEMPLATE(TEMPLATES_DIR_NAME + "/evinoticebodyconfirm.html");
 
         private final String htmlTemplate;
 
