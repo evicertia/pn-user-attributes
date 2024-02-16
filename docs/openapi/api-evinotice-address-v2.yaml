@@ -26,11 +26,29 @@ paths:
                 $ref: '#/components/schemas/EviNotice'
       responses:
         '200':
-          description: Successful operation
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EviNoticeResponse'
         '401':
           description: Not authorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '400':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '500':
           description: Internal server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
 components:
   securitySchemes:
     basicAuth:
@@ -63,4 +81,22 @@ components:
         CommitmentCommentsAllowed:
           type: string
         CommitmentChoice:
+          type: string
+    EviNoticeResponse:
+      type: object
+      properties:
+        Id:
+          type: string
+    ProblemDetail:
+      type: object
+      properties:
+        Type:
+          type: string
+        Detail:
+          type: string
+        Status:
+          type: string
+        Title:
+          type: string
+        RequestId:
           type: string

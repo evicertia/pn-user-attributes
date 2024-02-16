@@ -5,7 +5,7 @@
     <groupId>it.pagopa.pn</groupId>
     <artifactId>pn-parent</artifactId>
     <version>2.1.1</version>
-    <relativePath>../pn-parent-2.1.1/pom.xml</relativePath>
+    <relativePath>../pn-parent/pn-parent-2.1.1/pom.xml</relativePath>
   </parent>
   <groupId>it.pagopa.pn.user.attributes</groupId>
   <artifactId>pn-user-attributes</artifactId>
@@ -125,6 +125,7 @@
         <version>3.0.1</version>
         <scope>provided</scope>
     </dependency>
+
   </dependencies>
 
   <build>
@@ -407,7 +408,7 @@
             </goals>
             <phase>generate-resources</phase>
             <configuration>
-              <inputSpec>${project.basedir}/docs/openapi/api-intenet-address-v2.yaml</inputSpec>
+              <inputSpec>${project.basedir}/docs/openapi/api-evinotice-address-v2.yaml</inputSpec>
               <generatorName>java</generatorName>
               <library>webclient</library>
               <generateApiDocumentation>false</generateApiDocumentation>

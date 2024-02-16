@@ -1,6 +1,5 @@
 package it.pagopa.pn.user.attributes.middleware.wsclient;
 
-
 import it.pagopa.pn.commons.log.PnAuditLogBuilder;
 import it.pagopa.pn.commons.log.PnAuditLogEvent;
 import it.pagopa.pn.commons.log.PnAuditLogEventType;
@@ -8,8 +7,9 @@ import it.pagopa.pn.commons.log.PnLogger;
 import it.pagopa.pn.commons.utils.LogUtils;
 import it.pagopa.pn.user.attributes.config.PnUserattributesConfig;
 import it.pagopa.pn.user.attributes.exceptions.PnInvalidInputException;
-import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.evinotice.v2.api.EvinoticeApi;
+import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.evinotice.v2.dto.ProblemDetailDto;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.evinotice.v2.dto.EviNoticeDto;
+import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.evinotice.v2.dto.EviNoticeResponseDto;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.externalchannels.v1.api.DigitalCourtesyMessagesApi;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.externalchannels.v1.api.DigitalLegalMessagesApi;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.externalchannels.v1.dto.DigitalCourtesyMailRequestDto;
@@ -18,9 +18,13 @@ import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.msclient.e
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.server.v1.dto.CourtesyChannelTypeDto;
 import it.pagopa.pn.user.attributes.user.attributes.generated.openapi.server.v1.dto.LegalChannelTypeDto;
 import it.pagopa.pn.user.attributes.utils.TemplateGenerator;
+
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.reactive.function.client.ClientResponse;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
@@ -29,6 +33,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
 
 import static it.pagopa.pn.commons.pnclients.CommonBaseClient.elabExceptionMessage;
 import static it.pagopa.pn.user.attributes.exceptions.PnUserattributesExceptionCodes.ERROR_CODE_INVALID_COURTESY_CHANNEL;
@@ -118,7 +124,7 @@ public class PnExternalChannelClient {
     public Mono<String> sendVerificationCode(String recipientId, String address, LegalChannelTypeDto legalChannelType, CourtesyChannelTypeDto courtesyChannelType, String verificationCode)
     {
         String requestId = UUID.randomUUID().toString();
-        if (! pnUserattributesConfig.isDevelopment() ) {
+        if ( ! pnUserattributesConfig.isDevelopment() ) {
             if (legalChannelType != null) {
                 if (legalChannelType != LegalChannelTypeDto.EVINOTICE)
                     return sendLegalVerificationCode(recipientId, requestId, address, legalChannelType, verificationCode);
@@ -276,10 +282,9 @@ public class PnExternalChannelClient {
 
     public Mono<String> submitInternetAddress(String requestId, String recipientId, String address, LegalChannelTypeDto legalChannelType, String verificationCode)
     {
-        // TODO: Create PnLogger EVINOTICE EXTERNAL KEYS
         log.logInvokingAsyncExternalService(PnLogger.EXTERNAL_SERVICES.PN_EXTERNAL_CHANNELS, "Submitting an EviNotice", requestId);
 
-        if (! pnUserattributesConfig.isDevelopment() ) {
+        if ( ! pnUserattributesConfig.isDevelopment() ) {
             String logMessage = String.format(
                     "submiting new evinotice recipientId=%s address=%s requestId=%s",
                     recipientId, LogUtils.maskEmailAddress(address), requestId
@@ -318,22 +323,34 @@ public class PnExternalChannelClient {
         if (legalChannelType != LegalChannelTypeDto.EVINOTICE)
             throw new PnInvalidInputException(ERROR_CODE_INVALID_LEGAL_CHANNEL, "legalChannelType");
 
-            EvinoticeApi eviNoticeApi =  msClientConfig.eviNoticeApi(pnUserattributesConfig);
-            EviNoticeDto eviNoticeDTO = new EviNoticeDto();
+        WebClient webClient =  msClientConfig.eviNoticeApi(pnUserattributesConfig);
+        EviNoticeDto eviNoticeDTO = new EviNoticeDto();
 
-            eviNoticeDTO.setSubject(pnUserattributesConfig.getVerificationCodeMessageEVINOTICEConfirmSubject());
-            eviNoticeDTO.setBody(templateGenerator.generateEviNoticeBody(verificationCode));
-            eviNoticeDTO.setRecipientAddress(address);
-            eviNoticeDTO.setAffidavitKinds(Arrays.asList("SubmittedAdvanced", "Read", "Refused", "OnDemand", "CompleteAdvanced"));
-            eviNoticeDTO.setCertificationLevel("Advanced");
-            eviNoticeDTO.setDeliverySignFixedEmail(address);
-            eviNoticeDTO.setDeliverySignMethod("EmailPin");
-            eviNoticeDTO.setCommitmentChoice("Disabled");
-            eviNoticeDTO.setCommitmentCommentsAllowed("false");
+        eviNoticeDTO.setSubject(pnUserattributesConfig.getVerificationCodeMessageEVINOTICEConfirmSubject());
+        eviNoticeDTO.setBody(templateGenerator.generateEmailBody(verificationCode));
+        eviNoticeDTO.setCertificationLevel("QERDS");
+        eviNoticeDTO.setQeRDSProfile(pnUserattributesConfig.getEviNoticeQERDSProfileByEmail());
+        eviNoticeDTO.setRecipientAddress(address);
+        eviNoticeDTO.setAffidavitKinds(Arrays.asList("SubmittedAdvanced", "Read", "Refused", "OnDemand", "CompleteAdvanced"));
+        eviNoticeDTO.setDeliverySignFixedEmail(address);
+        eviNoticeDTO.setEvidenceAccessControlMethod("Public");
+        eviNoticeDTO.setDeliverySignMethod("EmailPin");
+        eviNoticeDTO.setCommitmentChoice("Disabled");
+        eviNoticeDTO.setCommitmentCommentsAllowed("false");
 
-            return eviNoticeApi.eviNoticeSubmitPost(eviNoticeDTO);
+        return webClient.post()
+            .uri("/EviNotice/Submit")
+            .bodyValue(eviNoticeDTO)
+            .retrieve()
+            .onStatus(HttpStatus.BAD_REQUEST::equals, clientResponse -> handleError(clientResponse, "Problems trying to submit the EviNotice: "))
+            .onStatus(HttpStatus.INTERNAL_SERVER_ERROR::equals, clientResponse -> handleError(clientResponse, "Internal Server Error: "))
+            .bodyToMono(EviNoticeResponseDto.class)
+            .flatMap(response -> {
+                log.logInvokingAsyncExternalService(PnLogger.EXTERNAL_SERVICES.PN_EXTERNAL_CHANNELS, "EviNotice submitted succesfully = " + response.getId(), requestId);
+
+                return Mono.empty();
+            });
     }
-
 
     @NotNull
     private Mono<Void> sendCourtesyEmail(String recipientId, String requestId, DigitalCourtesyMailRequestDto.QosEnum batch, String messageBody, String messageSubject, String address) {
@@ -368,5 +385,15 @@ public class PnExternalChannelClient {
         String message = pnUserattributesConfig.getVerificationCodeMessageSMS();
         message = String.format(message, verificationCode);
         return  message;
+    }
+
+    private Mono<? extends Throwable> handleError(ClientResponse clientResponse, String errorMessagePrefix) {
+
+        return clientResponse.bodyToMono(String.class)
+            .flatMap(errorBody -> {
+                String errorMessage = errorMessagePrefix + errorBody;
+                log.error(errorMessage);
+                return Mono.<Throwable>error(new RuntimeException(errorMessage));
+            });
     }
 }

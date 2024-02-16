@@ -45,3 +45,6 @@ build/
 /functions/pecValidationExpired/coverage/
 /functions/pecValidationExpired/.scannerwork/
 /functions/pecValidationExpired/.history/
+
+# Certs
+*.p12

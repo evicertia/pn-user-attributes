@@ -43,6 +43,9 @@ public class PnUserattributesConfig {
 
     private String clientEviNoticeUserName;
     private String clientEviNoticePass;
+    private String eviNoticeCertificateFile;
+    private String eviNoticeCertificatePin;
+    private String eviNoticeQERDSProfileByEmail;
 
     private String clientExternalchannelsHeaderExtchCxId;
     private String clientExternalchannelsSenderEmail;
