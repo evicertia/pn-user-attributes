@@ -329,7 +329,9 @@ public class PnExternalChannelClient {
         eviNoticeDTO.setSubject(pnUserattributesConfig.getVerificationCodeMessageEVINOTICEConfirmSubject());
         eviNoticeDTO.setBody(templateGenerator.generateEmailBody(verificationCode));
         eviNoticeDTO.setCertificationLevel("QERDS");
-        eviNoticeDTO.setQeRDSProfile(pnUserattributesConfig.getEviNoticeQERDSProfileByEmail());
+        eviNoticeDTO.setQeRDSEnrolmentProfile(pnUserattributesConfig.getEviNoticeQERDSProfileByEmail());
+        eviNoticeDTO.setQeRDSEnrollmentAllowed("true");
+        eviNoticeDTO.setRecipientLegalIdRequired("true");
         eviNoticeDTO.setRecipientAddress(address);
         eviNoticeDTO.setAffidavitKinds(Arrays.asList("SubmittedAdvanced", "Read", "Refused", "OnDemand", "CompleteAdvanced"));
         eviNoticeDTO.setDeliverySignFixedEmail(address);
@@ -387,8 +389,8 @@ public class PnExternalChannelClient {
         return  message;
     }
 
-    private Mono<? extends Throwable> handleError(ClientResponse clientResponse, String errorMessagePrefix) {
-
+    private Mono<? extends Throwable> handleError(ClientResponse clientResponse, String errorMessagePrefix)
+    {
         return clientResponse.bodyToMono(String.class)
             .flatMap(errorBody -> {
                 String errorMessage = errorMessagePrefix + errorBody;

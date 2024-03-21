@@ -62,7 +62,15 @@ components:
           type: string
         Body:
           type: string
-        QERDSProfile:
+        QERDSEnrolmentProfile:
+          type: string
+        QERDSEnrollmentAllowed:
+          type: string
+        RecipientLegalIdRequired:
+          type: string
+        RecipientLegalIdValue:
+          type: string
+        RecipientLegalIdKind:
           type: string
         RecipientAddress:
           type: string
